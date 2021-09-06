@@ -1,0 +1,43 @@
+/*
+ inventory file for upgrad assignment
+ Author: Venkatesh G
+ Email: itsvenkatesh@gmail.com
+*/
+
+pipeline {
+    agent any
+    stages {
+        stage('Configure Git repository') {
+            steps {
+                 checkout([
+                            $class: 'GitSCM', 
+                            branches: [[name: '*/master']], 
+                            doGenerateSubmoduleConfigurations: false, 
+                            extensions: [[$class: 'CleanCheckout']], 
+                            submoduleCfg: [], 
+                            userRemoteConfigs: [[credentialsId: '43534567-rxd3-4r78-6af4-4ht8guje3', url: 'https://github.com/venkig-2244/upgrad_project_1.git']]
+                        ])
+            }
+        }
+
+	stage('Build docker image and push image') {
+
+            steps {
+                sh "aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/e2s9y7g1"
+                sh "docker build -t test-node-app ."
+                sh "docker tag test-node-app:latest public.ecr.aws/e2s9y7g1/test-node-app:latest"
+                sh "docker push public.ecr.aws/e2s9y7g1/test-node-app:latest"
+            }
+
+        }
+
+        stage('Deploy docker image on application server') {
+            steps {
+                sh "ssh app"
+                sh "docker stop test-node-app || docker run -d public.ecr.aws/e2s9y7g1/test-node-app:latest"
+            }
+        }
+    }
+}
+
+/* End of file */

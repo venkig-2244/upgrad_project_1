@@ -1,0 +1,17 @@
+# ========================================================
+# inventory file for upgrad assignment
+# Author: Venkatesh G
+# Email: itsvenkatesh@gmail.com
+# ========================================================
+
+# Jenkins server
+[jenkins]
+192.168.102.209 ansible_user=ubuntu ansible_ssh_private_key_file=upgradvenky.pem
+
+# Application server.
+[app] 
+192.168.102.63 ansible_user=ubuntu ansible_ssh_private_key_file=upgradvenky.pem
+
+# ========================================================
+# End of file
+# ========================================================
