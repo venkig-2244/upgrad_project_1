@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis-pv
+  namespace: demo
+spec:
+  storageClassName: ""
+  awsElasticBlockStore:
+     fsType: xfs
+     volumeID: "vol-0564c35eb771a6781" 
+  capacity:
+     storage: 1Gi
+  accessModes:
+     - ReadWriteOnce
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: demo
+spec:
+  storageClassName: "" # Empty string must be explicitly set otherwise default StorageClass will be set
+  volumeName: redis-pv
+  accessModes:
+     - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+

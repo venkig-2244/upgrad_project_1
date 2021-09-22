@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-server
+  namespace: demo
+spec:
+  selector:
+    matchLabels:
+      app: apprenticeship-redis
+  serviceName: 'redis-service'
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: redis-app
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: redis-app
+          image: redis
+          args:
+            - /etc/redis/redis.conf
+          volumeMounts:
+            - mountPath: /etc/redis
+              name: redis-config
+              readOnly: false
+            - name: redis-storage
+              mountPath: /data
+              readOnly: false
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 200Mi
+          ports:
+            - containerPort: 6379
+              name: redis
+          livenessProbe:
+            exec:
+              command: ['redis-cli', 'ping']
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 2
+      volumes:
+        - name: redis-config
+          configMap:
+            name: redis-config
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-storage
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
