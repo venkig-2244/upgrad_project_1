@@ -87,15 +87,11 @@ nodeGroups: # Refer: https://github.com/weaveworks/eksctl/blob/main/examples/05-
     instancesDistribution:
       instanceTypes:
         - t2.medium
-    desiredCapacity: 0
-    minSize: 0
-    maxSize: 1
+        - t3.medium
+    desiredCapacity: 1
+    minSize: 1
+    maxSize: 5
     subnets:
       - my-public-201-a
-  - name: scale-east-1a
-    instancesDistribution:
-        instanceTypes: [t2.medium, t3.medium, c3.medium]
-    desiredCapacity: 1
-    minSize: 0
-    maxSize: 5
+
 
