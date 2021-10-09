@@ -1,25 +1,24 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: redis-config
-  namespace: demo
+  name: redis-server
+  namespace: redis-demo
 data:
-  redis.conf: |
+  redis.conf: |+
     dir /var/lib/redis
     appendonly yes
     protected-mode no
-
 ---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: redis-pv
-  namespace: demo
+  namespace: redis-demo
 spec:
   storageClassName: ""
   awsElasticBlockStore:
      fsType: xfs
-     volumeID: "vol-0564c35eb771a6781"
+     volumeID: "vol-01854448d3ede386f"
   capacity:
      storage: 1Gi
   accessModes:
@@ -29,9 +28,9 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: redis-pvc
-  namespace: demo
+  namespace: redis-demo
 spec:
-  storageClassName: "" # Empty string must be explicitly set otherwise default StorageClass will be set
+  storageClassName: "" 
   volumeName: redis-pv
   accessModes:
      - ReadWriteOnce
@@ -39,65 +38,95 @@ spec:
     requests:
       storage: 1Gi
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: redis-service
-  namespace: demo
-  labels:
-    app: redis
-spec:
-  type: ClusterIP
-  ports:
-  - name: redis-app
-    port: 6379
-    targetPort: redis
-  clusterIP: None
-  selector:
-    app: redis
-    statefulset.kubernetes.io/pod-name: redis-0
----
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: redis-server
-  namespace: demo
+  namespace: redis-demo
 spec:
-  selector:
-    matchLabels: 
-      app: redis-app
-  serviceName: 'redis-service'
+  serviceName: redis-server
   replicas: 1
+  selector:
+    matchLabels:
+      app: redis-server
   template:
     metadata:
       labels:
-        app: redis-app
+        app: redis-server
     spec:
+      containers:
+      - name: redis
+        image: redis
+        ports:
+        - containerPort: 6379
+          name: redis
+        command: ["redis-server", "/conf/redis.conf"]
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 200Mi
+
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        volumeMounts:
+        - name: conf
+          mountPath: /conf
+          readOnly: false
+        - name: data
+          mountPath: /var/lib/redis
+          readOnly: false
+      volumes:
+      - name: conf
+        configMap:
+          name: redis-server
+          defaultMode: 0755
+      - name: data
+        persistentVolumeClaim:
+          claimName: redis-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-server
+  namespace: redis-demo
+spec:
+  type: ClusterIP
+  ports:
+  - port: 6379
+    targetPort: 6379
+    name: redis
+  selector:
+    app: redis-server
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-cli
+  namespace: redis-demo
+spec:
+  selector:
+    matchLabels: 
+      app: redis-cli
+  replicas: 1
+  
+  template:
+    metadata:
+      labels:
+        app: redis-cli
+    spec:
+      restartPolicy: Always
       terminationGracePeriodSeconds: 10
       containers:
-        - name: redis-app
+        - name: redis-cli
           image: redis
-          args:
-            - /etc/redis/redis.conf
-          volumeMounts:
-            - mountPath: /var/lib/redis
-              name: dir 
-              readOnly: false
-          resources:
-            requests:
-              cpu: 50m
-              memory: 128Mi
-            limits:
-              cpu: 200m
-              memory: 200Mi
+          command: ["/bin/sh","-c","sleep 100000"]
           ports:
             - containerPort: 6379
               name: redis
-      volumes:
-        - name: redis-config 
-          configMap:
-            name: redis-config
-        - name: dir
-          persistentVolumeClaim:
-             claimName: redis-pvc
-
+  
